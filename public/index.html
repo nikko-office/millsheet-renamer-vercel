@@ -396,12 +396,30 @@
                     })
                 });
                 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `Server error: ${response.status}`);
+                const responseText = await response.text();
+                let responseData = null;
+                
+                if (responseText && responseText.trim()) {
+                    try {
+                        responseData = JSON.parse(responseText);
+                    } catch (parseError) {
+                        if (response.ok) {
+                            throw new Error('サーバー応答の解析に失敗しました。APIの動作を確認してください。');
+                        }
+                    }
                 }
                 
-                const info = await response.json();
+                if (!response.ok) {
+                    const errorMessage = (responseData && responseData.error)
+                        ? responseData.error
+                        : `Server error: ${response.status}`;
+                    const errorDetails = (responseData && responseData.details)
+                        ? ` (${responseData.details})`
+                        : '';
+                    throw new Error(`${errorMessage}${errorDetails}`);
+                }
+                
+                const info = responseData;
                 console.log('API response:', info);
                 
                 if (info) {

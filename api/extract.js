@@ -22,7 +22,46 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { pdfBase64, apiKey } = req.body;
+    let body = req.body;
+
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch (parseError) {
+        return res.status(400).json({
+          error: 'Invalid JSON body',
+          details: parseError.message
+        });
+      }
+    }
+
+    if (!body) {
+      const raw = await new Promise((resolve, reject) => {
+        let data = '';
+        req.on('data', chunk => {
+          data += chunk;
+        });
+        req.on('end', () => resolve(data));
+        req.on('error', reject);
+      });
+
+      if (raw && raw.trim()) {
+        try {
+          body = JSON.parse(raw);
+        } catch (parseError) {
+          return res.status(400).json({
+            error: 'Invalid JSON body',
+            details: parseError.message
+          });
+        }
+      }
+    }
+
+    if (!body) {
+      return res.status(400).json({ error: 'Missing request body' });
+    }
+
+    const { pdfBase64, apiKey } = body;
 
     if (!pdfBase64 || !apiKey) {
       return res.status(400).json({ error: 'Missing pdfBase64 or apiKey' });
