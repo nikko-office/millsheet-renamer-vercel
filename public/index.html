@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ミルシートPDF自動リネーム</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 900px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            font-size: 32px;
+            color: #2d3748;
+            margin-bottom: 10px;
+            text-align: center;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 30px;
+            font-size: 15px;
+        }
+        
+        .api-key-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: linear-gradient(135deg, #fff5f5 0%, #fed7d7 100%);
+            border-radius: 12px;
+            border-left: 5px solid #e53e3e;
+        }
+        
+        .api-key-label {
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 10px;
+            display: block;
+            font-size: 15px;
+        }
+        
+        .api-key-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.3s;
+        }
+        
+        .api-key-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .api-key-hint {
+            font-size: 13px;
+            color: #718096;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+        
+        .api-key-hint a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .drop-zone {
+            border: 3px dashed #cbd5e0;
+            border-radius: 16px;
+            padding: 70px 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+        }
+        
+        .drop-zone:hover {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #edf2f7 0%, #e6fffa 100%);
+            transform: translateY(-2px);
+        }
+        
+        .drop-zone.dragover {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
+            transform: scale(1.02);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+        }
+        
+        .drop-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .drop-text {
+            font-size: 20px;
+            color: #2d3748;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .drop-hint {
+            font-size: 15px;
+            color: #a0aec0;
+        }
+        
+        #fileInput { display: none; }
+        
+        .file-list { margin-top: 35px; }
+        
+        .file-item {
+            background: linear-gradient(135deg, #f7fafc 0%, #ffffff 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+        
+        .file-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        
+        .file-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            color: #2d3748;
+            flex: 1;
+            word-break: break-all;
+            font-size: 15px;
+        }
+        
+        .file-status {
+            margin-left: 15px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        
+        .status-processing {
+            background: linear-gradient(135deg, #fef5e7 0%, #fdeaa3 100%);
+            color: #f39c12;
+        }
+        
+        .status-success {
+            background: linear-gradient(135deg, #d4edda 0%, #a8e6cf 100%);
+            color: #28a745;
+        }
+        
+        .status-error {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #dc3545;
+        }
+        
+        .result-info {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #4a5568;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .result-item {
+            padding: 8px;
+            background: #f7fafc;
+            border-radius: 6px;
+        }
+        
+        .result-label {
+            font-weight: 700;
+            color: #2d3748;
+            font-size: 12px;
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .result-value {
+            color: #4a5568;
+            font-size: 13px;
+        }
+        
+        .new-filename {
+            margin-top: 15px;
+            padding: 15px;
+            background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #234e52;
+            word-break: break-all;
+            border: 2px solid #81e6d9;
+            font-weight: 600;
+        }
+        
+        .download-btn {
+            margin-top: 15px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s;
+            width: 100%;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            color: #dc3545;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+        
+        @media (max-width: 600px) {
+            .result-grid { grid-template-columns: 1fr; }
+            .container { padding: 25px; }
+            h1 { font-size: 26px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 ミルシートPDF自動リネーム</h1>
+        <p class="subtitle">Claude APIで高精度に自動認識（Vercel版）</p>
+        
+        <div class="api-key-section">
+            <label class="api-key-label">🔑 Claude API Key（必須）</label>
+            <input type="password" id="apiKey" class="api-key-input" placeholder="sk-ant-api03-...">
+            <div class="api-key-hint">
+                API Keyは <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a> から取得できます<br>
+                ※API Keyはサーバーレス関数経由で安全に処理されます
+            </div>
+        </div>
+        
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-icon">📁</div>
+            <div class="drop-text">PDFファイルをドラッグ&ドロップ</div>
+            <div class="drop-hint">または、クリックしてファイルを選択</div>
+            <input type="file" id="fileInput" accept=".pdf" multiple>
+        </div>
+        
+        <div class="file-list" id="fileList"></div>
+    </div>
+    
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const apiKeyInput = document.getElementById('apiKey');
+        
+        // LocalStorageからAPI Keyを読み込み
+        const savedApiKey = localStorage.getItem('claudeApiKey');
+        if (savedApiKey) {
+            apiKeyInput.value = savedApiKey;
+        }
+        
+        // API Keyを保存
+        apiKeyInput.addEventListener('change', () => {
+            if (apiKeyInput.value.trim()) {
+                localStorage.setItem('claudeApiKey', apiKeyInput.value.trim());
+            }
+        });
+        
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+        
+        async function handleFiles(files) {
+            const apiKey = apiKeyInput.value.trim();
+            
+            if (!apiKey) {
+                alert('⚠️ Claude API Keyを入力してください');
+                apiKeyInput.focus();
+                return;
+            }
+            
+            for (let file of files) {
+                if (file.type === 'application/pdf') {
+                    await processFile(file, apiKey);
+                }
+            }
+        }
+        
+        async function processFile(file, apiKey) {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.innerHTML = `
+                <div class="file-header">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-status status-processing">
+                        <div class="spinner"></div> 処理中...
+                    </div>
+                </div>
+            `;
+            fileList.appendChild(fileItem);
+            
+            try {
+                console.log('Processing file:', file.name);
+                
+                // PDFをBase64に変換
+                const base64 = await fileToBase64(file);
+                console.log('Base64 conversion complete');
+                
+                // サーバーレス関数で情報抽出
+                console.log('Calling serverless function...');
+                const response = await fetch('/api/extract', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        pdfBase64: base64,
+                        apiKey: apiKey
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Server error: ${response.status}`);
+                }
+                
+                const info = await response.json();
+                console.log('API response:', info);
+                
+                if (info) {
+                    // 新しいファイル名を生成
+                    const newFilename = generateFilename(info);
+                    
+                    // 成功表示
+                    fileItem.innerHTML = `
+                        <div class="file-header">
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-status status-success">✓ 完了</div>
+                        </div>
+                        <div class="result-info">
+                            <div class="result-grid">
+                                <div class="result-item">
+                                    <span class="result-label">📅 発行日</span>
+                                    <div class="result-value">${info.date}</div>
+                                </div>
+                                <div class="result-item">
+                                    <span class="result-label">📋 規格</span>
+                                    <div class="result-value">${info.spec}</div>
+                                </div>
+                                <div class="result-item">
+                                    <span class="result-label">📏 寸法</span>
+                                    <div class="result-value">${info.size}</div>
+                                </div>
+                                <div class="result-item">
+                                    <span class="result-label">🔢 鋼番</span>
+                                    <div class="result-value">${info.charge_no}</div>
+                                </div>
+                                <div class="result-item">
+                                    <span class="result-label">🏗️ 工事名</span>
+                                    <div class="result-value">${info.project}</div>
+                                </div>
+                                <div class="result-item">
+                                    <span class="result-label">🏭 メーカー</span>
+                                    <div class="result-value">${info.maker}</div>
+                                </div>
+                            </div>
+                            <div class="new-filename">📝 ${newFilename}</div>
+                            <button class="download-btn" onclick="downloadRenamedFile('${file.name}', '${newFilename}')">
+                                ⬇️ ダウンロード
+                            </button>
+                        </div>
+                    `;
+                    
+                    // ファイルデータを保存
+                    window[`file_${file.name}`] = file;
+                } else {
+                    throw new Error('情報抽出に失敗しました');
+                }
+            } catch (error) {
+                console.error('Error processing file:', error);
+                
+                let errorMessage = error.message;
+                
+                if (errorMessage.includes('401')) {
+                    errorMessage = 'API Keyが無効です。正しいKeyを入力してください。';
+                } else if (errorMessage.includes('429')) {
+                    errorMessage = 'API利用制限に達しました。しばらく待ってから再試行してください。';
+                }
+                
+                fileItem.innerHTML = `
+                    <div class="file-header">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-status status-error">✗ エラー</div>
+                    </div>
+                    <div class="error-message">
+                        ${errorMessage}
+                    </div>
+                `;
+            }
+        }
+        
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        function generateFilename(info) {
+            const parts = [
+                info.date || '不明',
+                info.spec || '不明',
+                info.size || '不明',
+                info.charge_no || '不明',
+                info.project || '不明',
+                info.maker || '不明'
+            ];
+            
+            let filename = parts.join('_') + '.pdf';
+            filename = filename.replace(/[\\/:*?"<>|]/g, '');
+            
+            return filename;
+        }
+        
+        function downloadRenamedFile(originalName, newName) {
+            const file = window[`file_${originalName}`];
+            if (file) {
+                const blob = new Blob([file], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = newName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        }
+    </script>
+</body>
+</html>

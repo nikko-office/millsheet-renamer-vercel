@@ -1,0 +1,19 @@
+{
+  "name": "millsheet-renamer",
+  "version": "1.0.0",
+  "description": "ミルシートPDF自動リネームツール",
+  "main": "api/extract.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel"
+  },
+  "keywords": [
+    "millsheet",
+    "pdf",
+    "rename",
+    "claude",
+    "api"
+  ],
+  "author": "",
+  "license": "MIT"
+}
